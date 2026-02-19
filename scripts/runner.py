@@ -333,7 +333,10 @@ def run_target():
         return
     
     status_msg(f"Running on target {ip}...", "running")
-    run_ssh_cmd(ip, "/usr/bin/kona/stasis", interactive=True)
+    try:
+        run_ssh_cmd(ip, "/usr/bin/kona/stasis", interactive=True)
+    except KeyboardInterrupt:
+        status_msg("Interrupted - returning to menu", "warning")
     pause()
 
 def run_test():
@@ -345,7 +348,10 @@ def run_test():
         return
     
     status_msg(f"Running test app on {ip}...", "running")
-    run_ssh_cmd(ip, "/usr/bin/kona/test_stasis", interactive=True)
+    try:
+        run_ssh_cmd(ip, "/usr/bin/kona/test_stasis", interactive=True)
+    except KeyboardInterrupt:
+        status_msg("Interrupted - returning to menu", "warning")
     pause()
 
 def run_native():
@@ -375,7 +381,11 @@ def ssh_to_target():
         return
     
     status_msg(f"Connecting to {ip}...", "running")
-    run_ssh_cmd(ip, "", interactive=True)
+    try:
+        run_ssh_cmd(ip, "", interactive=True)
+    except KeyboardInterrupt:
+        status_msg("Disconnected - returning to menu", "warning")
+    pause()
 
 def compile_mux_target():
     """Compile mux for target"""
