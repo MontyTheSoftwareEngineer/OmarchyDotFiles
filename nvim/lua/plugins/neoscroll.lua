@@ -11,8 +11,8 @@ return {
 
       -- Define custom scroll mappings for Ctrl + F and Ctrl + B
       local mappings = {
-        ["<C-f>"] = { "<cmd>lua require('neoscroll').scroll(vim.wo.scroll, true, 150)<CR>" },  -- scroll down
-        ["<C-b>"] = { "<cmd>lua require('neoscroll').scroll(-vim.wo.scroll, true, 150)<CR>" }, -- scroll up
+        ["<C-f>"] = { "<cmd>lua require('neoscroll').scroll(vim.wo.scroll, {move_cursor=true, duration=150})<CR>" },  -- scroll down
+        ["<C-b>"] = { "<cmd>lua require('neoscroll').scroll(-vim.wo.scroll, {move_cursor=true, duration=150})<CR>" }, -- scroll up
       }
 
       -- Set custom mappings using helper function
