@@ -24,24 +24,10 @@
   padding: 0 6px;
   margin: 0 1.5px;
   min-width: 9px;
-  background-color: transparent;
-  color: #888888;
-  opacity: 0.6;
-}
-
-#workspaces button.active {
-  background-color: #ffffff;
-  color: #ffffff;
-  font-weight: bold;
-  border-radius: 3px;
-  opacity: 1;
-  border: 2px solid #ffffff;
-  padding: 2px 8px;
-  box-shadow: 0 0 8px #ffffff;
 }
 
 #workspaces button.empty {
-  opacity: 0.3;
+  opacity: 0.5;
 }
 
 #cpu,
