@@ -13,6 +13,7 @@ return {
 --        buf_set_keymap('n', 'gr', '<Cmd>lua vim.lsp.buf.references()<CR>', opts)   -- Show References
         buf_set_keymap('n', 'gD', '<Cmd>lua vim.lsp.buf.declaration()<CR>', opts)  -- Go to Declaration
         buf_set_keymap('n', 'gi', '<Cmd>lua vim.lsp.buf.implementation()<CR>', opts)  -- Go to Implementation
+        buf_set_keymap('n', 'gn', '<Cmd>lua vim.lsp.buf.rename()<CR>', opts)  -- Rename Symbol
 
         -- Optionally, setup completion with nvim-cmp
         require'cmp'.setup.buffer { enabled = true }
