@@ -5,20 +5,21 @@ white="\e[38;2;255;255;255m"
 red="\e[38;2;255;0;0m"
 reset="\e[0m"
 
-printf "${blue_bg}${white}⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ${reset}${red}██████████████████${reset}\n"
-printf "${blue_bg}${white}  ⭐ ⭐ ⭐ ⭐ ⭐  ${reset}${white}██████████████████${reset}\n"
-printf "${blue_bg}${white}⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ${reset}${red}██████████████████${reset}\n"
-printf "${blue_bg}${white}  ⭐ ⭐ ⭐ ⭐ ⭐  ${reset}${white}██████████████████${reset}\n"
-printf "${blue_bg}${white}⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ${reset}${red}██████████████████${reset}\n"
-printf "${blue_bg}${white}  ⭐ ⭐ ⭐ ⭐ ⭐  ${reset}${white}██████████████████${reset}\n"
-printf "${blue_bg}${white}⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ${reset}${red}██████████████████${reset}\n"
-
-printf "${white}████████████████████████████████████${reset}\n"
-printf "${red}████████████████████████████████████${reset}\n"
-printf "${white}████████████████████████████████████${reset}\n"
-printf "${red}████████████████████████████████████${reset}\n"
-printf "${white}████████████████████████████████████${reset}\n"
-printf "${red}████████████████████████████████████${reset}\n"
+# printf "${blue_bg}${white}⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ${reset}${red}██████████████████${reset}\n"
+# printf "${blue_bg}${white}  ⭐ ⭐ ⭐ ⭐ ⭐  ${reset}${white}██████████████████${reset}\n"
+# printf "${blue_bg}${white}⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ${reset}${red}██████████████████${reset}\n"
+# printf "${blue_bg}${white}  ⭐ ⭐ ⭐ ⭐ ⭐  ${reset}${white}██████████████████${reset}\n"
+# printf "${blue_bg}${white}⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ${reset}${red}██████████████████${reset}\n"
+# printf "${blue_bg}${white}  ⭐ ⭐ ⭐ ⭐ ⭐  ${reset}${white}██████████████████${reset}\n"
+# printf "${blue_bg}${white}⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ${reset}${red}██████████████████${reset}\n"
+#
+# printf "${white}████████████████████████████████████${reset}\n"
+# printf "${red}████████████████████████████████████${reset}\n"
+# printf "${white}████████████████████████████████████${reset}\n"
+# printf "${red}████████████████████████████████████${reset}\n"
+# printf "${white}████████████████████████████████████${reset}\n"
+# printf "${red}████████████████████████████████████${reset}\n"
+kitty +kitten icat --align center ~/Downloads/hifam-flag.png
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
@@ -144,3 +145,8 @@ alias cd="z"
 eval "$(atuin init zsh)"
 export PATH=/home/hpham/Qt/6.7.0/gcc_64/bin:/home/hpham/OmarchyDotFiles/scripts:~/bin:/opt/st/stm32cubeide_1.18.1/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.linux64_1.0.0.202410170706/tools/bin:$PATH
 
+
+. "$HOME/.local/share/../bin/env"
+
+# opencode
+export PATH=/home/hpham/.opencode/bin:$PATH
