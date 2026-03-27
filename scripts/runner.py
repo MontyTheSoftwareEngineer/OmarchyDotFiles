@@ -5,6 +5,9 @@ import sys
 import subprocess
 from pathlib import Path
 from typing import Optional
+import time
+import serial
+import serial.tools.list_ports
 
 # Color codes - Using bright/bold versions for better tmux compatibility
 class Colors:
@@ -29,7 +32,9 @@ class Paths:
     NATIVE_BUILD = "/home/hpham/MVE/builds/kona-gui-build-native"
     TARGET_BUILD = "/home/hpham/MVE/builds/kona-gui-build-target"
     MUX_REPO = "/home/hpham/MVE/repos/kona-qt/kona_mux"
+    KONA_QT_ROOT = "/home/hpham/MVE/repos/kona-qt"
     FIRMWARE_SRC = "/home/hpham/MVE/repos/kona-qt/source/Debug"
+    FIRMWARE_APP_SRC = "/home/hpham/MVE/repos/kona-qt/source/Core/App"
     QT_PATH = "/home/hpham/Qt/6.7.0/gcc_64/bin/qmake"
     SDK_QMAKE = "/opt/verdin6.7-all/4.0.16/sysroots/x86_64-pokysdk-linux/usr/bin/qmake"
 
@@ -167,13 +172,17 @@ def print_menu(target_ip: Optional[str]):
         ("6", "Deploy Mux", "action"),
         ("7", "Deploy Firmware", "action"),
         ("8", "Deploy Test App", "action"),
-        ("9", "Flash STM Firmware", "special"),
+        ("9", "Flash STM Firmware (Remote)", "special"),
+        ("17", "Flash STM Firmware (Local)", "special"),
         ("", "", "separator"),
         ("", "EXECUTION", "header"),
         ("10", "Run Native", "action"),
         ("11", "Run Target", "action"),
         ("12", "Run Mux", "action"),
         ("13", "Run Test App", "action"),
+        ("", "", "separator"),
+        ("", "DEVICE UTILITIES", "header"),
+        ("18", "Set BioConnect ASCII Mode", "special"),
         ("", "", "separator"),
         ("", "SYSTEM CONTROL", "header"),
         ("14", "Kill GUI + Mux", "danger"),
@@ -407,23 +416,37 @@ def build_firmware():
     choice = input(f"\n{Colors.BOLD}{Colors.CYAN}➜{Colors.ENDC} Select build type: ").strip()
     
     if choice == '1':
-        build_target = 'manufacturing-build'
-        status_msg("Building manufacturing firmware...", "running")
+        # Manufacturing build - use t3km target from kona-qt root
+        status_msg("Building manufacturing firmware with LSP support...", "running")
+        try:
+            os.chdir(Paths.KONA_QT_ROOT)
+            # Clean previous build
+            subprocess.call(['make', 'clean'], cwd=Paths.FIRMWARE_SRC)
+            # Build with bear to generate compile_commands.json
+            subprocess.call(['bear', '--', 'make', 't3km', '-j12'])
+            # Copy compile_commands.json to App directory for nvim LSP
+            compile_cmds = os.path.join(Paths.KONA_QT_ROOT, 'compile_commands.json')
+            if os.path.exists(compile_cmds):
+                import shutil
+                shutil.copy(compile_cmds, Paths.FIRMWARE_APP_SRC)
+                status_msg("Firmware build complete! compile_commands.json generated for LSP.", "success")
+            else:
+                status_msg("Firmware build complete! (Warning: compile_commands.json not found)", "success")
+        except Exception as e:
+            status_msg(f"Build failed: {e}", "error")
     elif choice == '2':
+        # Customer build - use old method from Debug directory
         build_target = 'customer-build'
         status_msg("Building customer firmware...", "running")
+        try:
+            os.chdir(Paths.FIRMWARE_SRC)
+            subprocess.call(['make', 'clean'])
+            subprocess.call(['make', build_target, '-j12'])
+            status_msg("Firmware build complete!", "success")
+        except Exception as e:
+            status_msg(f"Build failed: {e}", "error")
     else:
         status_msg("Invalid selection!", "error")
-        pause()
-        return
-    
-    try:
-        os.chdir(Paths.FIRMWARE_SRC)
-        subprocess.call(['make', 'clean'])
-        subprocess.call(['make', build_target, '-j12'])
-        status_msg("Firmware build complete!", "success")
-    except Exception as e:
-        status_msg(f"Build failed: {e}", "error")
     pause()
 
 def deploy_firmware():
@@ -485,6 +508,114 @@ def run_mux():
     status_msg(f"Starting mux on {ip}...", "running")
     run_ssh_cmd(ip, "systemctl start kona-mux")
     status_msg("Mux started!", "success")
+    pause()
+
+def flash_stm_firmware_local():
+    """Flash STM firmware locally (not over SSH)"""
+    import time
+    import serial
+    
+    firmware_path = f"{Paths.FIRMWARE_SRC}/stasis_fw.bin"
+    
+    if not os.path.exists(firmware_path):
+        status_msg(f"Firmware file not found: {firmware_path}", "error")
+        pause()
+        return
+    
+    status_msg(f"Flashing STM firmware locally from {firmware_path}...", "running")
+    
+    def check_dfu():
+        """Check if device is in DFU mode"""
+        result = subprocess.run("lsusb", stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if result.returncode == 0 and "DFU" in result.stdout:
+            return 0
+        return 1
+    
+    def find_device_port():
+        """Find STM device serial port"""
+        print("Looking for STM device...")
+        result = subprocess.run(["ls", "-l", "/dev/serial/by-id"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if result.returncode == 0:
+            for item in result.stdout.strip().split('\n'):
+                if "STM" in item:
+                    rPath = item.split()[-1]
+                    port = "/dev/" + rPath.split('/')[-1]
+                    print(f"Found STM device at: {port}")
+                    return port
+            if check_dfu() == 0:
+                print("Device is already in DFU mode")
+                return None
+            print("ERROR: No STM device found")
+            return None
+        else:
+            if check_dfu() == 0:
+                print("Device is already in DFU mode")
+                return None
+            print("ERROR: Could not find serial devices")
+            return None
+    
+    def calculate_crc(data):
+        """Calculate CRC for DFU command"""
+        wCRCTable = [0X0000, 0XC0C1, 0XC181, 0X0140, 0XC301, 0X03C0, 0X0280, 0XC241, 0XC601, 0X06C0, 0X0780, 0XC741, 0X0500, 0XC5C1, 0XC481, 0X0440, 0XCC01, 0X0CC0, 0X0D80, 0XCD41, 0X0F00, 0XCFC1, 0XCE81, 0X0E40, 0X0A00, 0XCAC1, 0XCB81, 0X0B40, 0XC901, 0X09C0, 0X0880, 0XC841, 0XD801, 0X18C0, 0X1980, 0XD941, 0X1B00, 0XDBC1, 0XDA81, 0X1A40, 0X1E00, 0XDEC1, 0XDF81, 0X1F40, 0XDD01, 0X1DC0, 0X1C80, 0XDC41, 0X1400, 0XD4C1, 0XD581, 0X1540, 0XD701, 0X17C0, 0X1680, 0XD641, 0XD201, 0X12C0, 0X1380, 0XD341, 0X1100, 0XD1C1, 0XD081, 0X1040, 0XF001, 0X30C0, 0X3180, 0XF141, 0X3300, 0XF3C1, 0XF281, 0X3240, 0X3600, 0XF6C1, 0XF781, 0X3740, 0XF501, 0X35C0, 0X3480, 0XF441, 0X3C00, 0XFCC1, 0XFD81, 0X3D40, 0XFF01, 0X3FC0, 0X3E80, 0XFE41, 0XFA01, 0X3AC0, 0X3B80, 0XFB41, 0X3900, 0XF9C1, 0XF881, 0X3840, 0X2800, 0XE8C1, 0XE981, 0X2940, 0XEB01, 0X2BC0, 0X2A80, 0XEA41, 0XEE01, 0X2EC0, 0X2F80, 0XEF41, 0X2D00, 0XEDC1, 0XEC81, 0X2C40, 0XE401, 0X24C0, 0X2580, 0XE541, 0X2700, 0XE7C1, 0XE681, 0X2640, 0X2200, 0XE2C1, 0XE381, 0X2340, 0XE101, 0X21C0, 0X2080, 0XE041, 0XA001, 0X60C0, 0X6180, 0XA141, 0X6300, 0XA3C1, 0XA281, 0X6240, 0X6600, 0XA6C1, 0XA781, 0X6740, 0XA501, 0X65C0, 0X6480, 0XA441, 0X6C00, 0XACC1, 0XAD81, 0X6D40, 0XAF01, 0X6FC0, 0X6E80, 0XAE41, 0XAA01, 0X6AC0, 0X6B80, 0XAB41, 0X6900, 0XA9C1, 0XA881, 0X6840, 0X7800, 0XB8C1, 0XB981, 0X7940, 0XBB01, 0X7BC0, 0X7A80, 0XBA41, 0XBE01, 0X7EC0, 0X7F80, 0XBF41, 0X7D00, 0XBDC1, 0XBC81, 0X7C40, 0XB401, 0X74C0, 0X7580, 0XB541, 0X7700, 0XB7C1, 0XB681, 0X7640, 0X7200, 0XB2C1, 0XB381, 0X7340, 0XB101, 0X71C0, 0X7080, 0XB041, 0X5000, 0X90C1, 0X9181, 0X5140, 0X9301, 0X53C0, 0X5280, 0X9241, 0X9601, 0X56C0, 0X5780, 0X9741, 0X5500, 0X95C1, 0X9481, 0X5440, 0X9C01, 0X5CC0, 0X5D80, 0X9D41, 0X5F00, 0X9FC1, 0X9E81, 0X5E40, 0X5A00, 0X9AC1, 0X9B81, 0X5B40, 0X9901, 0X59C0, 0X5880, 0X9841, 0X8801, 0X48C0, 0X4980, 0X8941, 0X4B00, 0X8BC1, 0X8A81, 0X4A40, 0X4E00, 0X8EC1, 0X8F81, 0X4F40, 0X8D01, 0X4DC0, 0X4C80, 0X8C41, 0X4400, 0X84C1, 0X8581, 0X4540, 0X8701, 0X47C0, 0X4680, 0X8641, 0X8201, 0X42C0, 0X4380, 0X8341, 0X4100, 0X81C1, 0X8081, 0X4040]
+        wCRCWord = 0xFFFF
+        for byte in data:
+            byte = byte & 0xFF
+            nTemp = (byte ^ (wCRCWord & 0x00FF)) & 0x00FF
+            wCRCWord = ((wCRCWord >> 8) ^ wCRCTable[nTemp]) & 0xFFFF
+        return wCRCWord
+    
+    def create_dfu_command():
+        """Create DFU mode command"""
+        request = [0x53, 0x3D, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3D, 0x45]
+        crc = calculate_crc(request[6:])
+        request[3] = crc & 0xFF
+        request[4] = (crc >> 8) & 0xFF
+        return bytearray(request)
+    
+    def set_dfu_mode(port):
+        """Set device to DFU mode via serial"""
+        print(f"Sending DFU mode command to {port}...")
+        try:
+            ser = serial.Serial(port=port, baudrate=115200, timeout=0.5)
+            ser.write(create_dfu_command())
+            time.sleep(1)
+            ser.close()
+            print("DFU command sent")
+            time.sleep(2)
+        except Exception as e:
+            print(f"ERROR: {e}")
+            status_msg(f"Failed to send DFU command: {e}", "error")
+            return False
+        return True
+    
+    # Check if device is already in DFU mode
+    if check_dfu() == 0:
+        print("Device already in DFU mode")
+    else:
+        # Find serial port and set DFU mode
+        port = find_device_port()
+        if port is None:
+            status_msg("Could not find STM device", "error")
+            pause()
+            return
+        if not set_dfu_mode(port):
+            status_msg("Failed to set DFU mode", "error")
+            pause()
+            return
+        if check_dfu() != 0:
+            status_msg("Device did not enter DFU mode", "error")
+            pause()
+            return
+        print("Device is now in DFU mode")
+    
+    # Flash firmware
+    print(f"Flashing firmware: {firmware_path}")
+    result = subprocess.run(["dfu-util", "-d", "0483:df11", "-a", "0", "-D", firmware_path, "--dfuse-address", "0x08000000:leave"])
+    
+    if result.returncode == 0:
+        status_msg("Firmware flashed successfully!", "success")
+    else:
+        status_msg("Firmware flashing failed!", "error")
     pause()
 
 def flash_stm_firmware():
@@ -590,6 +721,92 @@ sys.exit(result.returncode)
         status_msg("Firmware flashing failed!", "error")
     pause()
 
+def set_bioconnect_ascii_mode():
+    """Set BioConnect device to ASCII mode via USB command"""
+    # USB device identifiers for BioConnect board
+    USB_VID = 0x0483
+    USB_PID = 0x5740  # ST VCP (ttyACM*)
+    
+    status_msg("BioConnect Device - ASCII Mode Setter", "info")
+    print()
+    
+    # Find USB port
+    print(f"{Colors.DIM}Looking for BioConnect device...{Colors.ENDC}")
+    ports = serial.tools.list_ports.comports()
+    candidates = [
+        p.device for p in ports
+        if p.vid == USB_VID and p.pid == USB_PID
+    ]
+    
+    if not candidates:
+        status_msg("No BioConnect device found!", "error")
+        print(f"\n{Colors.DIM}Looking for USB device with VID:PID = {USB_VID:04x}:{USB_PID:04x}{Colors.ENDC}")
+        print(f"\n{Colors.YELLOW}Troubleshooting:{Colors.ENDC}")
+        print("  1. Ensure device is connected via USB")
+        print("  2. Check device is powered on")
+        print("  3. Verify USB cable is functional")
+        print(f"\n{Colors.DIM}Available serial ports:{Colors.ENDC}")
+        for p in serial.tools.list_ports.comports():
+            vid = f"{p.vid:04x}" if p.vid else "????"
+            pid = f"{p.pid:04x}" if p.pid else "????"
+            print(f"  {p.device} - {p.description} (VID:PID = {vid}:{pid})")
+        pause()
+        return
+    
+    # Select port if multiple found
+    if len(candidates) == 1:
+        port = candidates[0]
+        print(f"{Colors.GREEN}✓{Colors.ENDC} Found device at: {Colors.BOLD}{port}{Colors.ENDC}")
+    else:
+        print(f"\n{Colors.YELLOW}Multiple devices found:{Colors.ENDC}")
+        for i, p in enumerate(candidates, 1):
+            print(f"  {Colors.CYAN}{i}{Colors.ENDC}. {p}")
+        try:
+            choice = input(f"\n{Colors.BOLD}Select device number: {Colors.ENDC}").strip()
+            choice_idx = int(choice) - 1
+            if choice_idx < 0 or choice_idx >= len(candidates):
+                status_msg("Invalid selection", "error")
+                pause()
+                return
+            port = candidates[choice_idx]
+        except (ValueError, IndexError, KeyboardInterrupt):
+            status_msg("Invalid selection", "error")
+            pause()
+            return
+    
+    # Send ASCII mode command
+    try:
+        status_msg(f"Connecting to {port}...", "running")
+        ser = serial.Serial(port, baudrate=115200, timeout=0.5)
+        time.sleep(0.5)  # Give it time to settle
+        
+        # Clear any buffered data
+        ser.reset_input_buffer()
+        ser.reset_output_buffer()
+        
+        # Send ASCII mode command: cmd=29, data=1
+        command = '{"cmd":"29","data":"1"}'
+        print(f"{Colors.DIM}Sending command: {command}{Colors.ENDC}")
+        ser.write(command.encode('utf-8'))
+        time.sleep(1)
+        
+        # Read response
+        response = ser.read_all()
+        if response:
+            print(f"{Colors.DIM}Response: {response.decode('utf-8', errors='ignore')}{Colors.ENDC}")
+        else:
+            print(f"{Colors.DIM}No response received (this is normal for some devices){Colors.ENDC}")
+        
+        ser.close()
+        status_msg("Device should now be in ASCII mode", "success")
+        
+    except serial.SerialException as e:
+        status_msg(f"Failed to communicate with device: {e}", "error")
+    except Exception as e:
+        status_msg(f"Error: {e}", "error")
+    
+    pause()
+
 def main():
     """Main menu loop"""
     while True:
@@ -622,6 +839,8 @@ def main():
             '14': kill_gui_and_mux,
             '15': ssh_to_target,
             '16': set_target_ip,
+            '17': flash_stm_firmware_local,
+            '18': set_bioconnect_ascii_mode,
             '0': lambda: sys.exit(0),
         }
         
