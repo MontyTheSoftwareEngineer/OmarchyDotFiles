@@ -10,8 +10,14 @@ return {
           topdelete    = { text = "" },
           changedelete = { text = "" },
         },
-        current_line_blame = false, -- set true if you want blame inline
+        current_line_blame = false,
       })
+
+      -- Keymap: preview hunk in a floating window
+      vim.keymap.set("n", "<leader>hp", function()
+        require("gitsigns").preview_hunk_inline()
+      end, { desc = "Preview Git hunk" })
     end,
   },
 }
+

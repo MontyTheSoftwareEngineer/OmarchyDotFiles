@@ -75,12 +75,12 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
   end
 end
 
-vim.opt.rtp:prepend(lazypath)
 
 local opts = {}
 
-vim.o.background = "dark"
+-- vim.o.background = "dark"
 vim.o.termguicolors = true
+vim.opt.rtp:prepend(lazypath)
 --require ("black_green")
 require("lazy").setup("plugins")
 
