@@ -4,26 +4,21 @@
   "$HOME/.config/waybar/ModulesWorkspaces",
   "$HOME/.config/waybar/ModulesCustom",
   "$HOME/.config/waybar/ModulesGroups",
-  "$HOME/.config/waybar/UserModules",
+  "$HOME/.config/waybar/UserModules"
   ],
   "reload_style_on_change": true,
   "layer": "top",
   "position": "top",
   "spacing": 0,
   "height": 26,
-  "modules-left": ["custom/omarchy", "hyprland/workspaces#rw"],
-  "modules-center": ["clock", "custom/update", "custom/voxtype", "custom/screenrecording-indicator"],
+  "modules-left": ["hyprland/workspaces#rw"],
+  "modules-center": ["custom/waybar-media", "custom/voxtype", "custom/screenrecording-indicator"],
   "modules-right": [
-    "group/tray-expander",
-    "bluetooth",
-    "network",
-    "cpu",
-    "temperature",
-    "custom/cpu_fan",
-    "memory",
-    "disk",
-    "pulseaudio",
-    "battery"
+    // "group/tray-expander",
+    // "cpu",
+    // "memory",
+    // "disk",
+    "group/system"
   ],
   "hyprland/workspaces": {
     "on-click": "activate",
@@ -72,7 +67,8 @@
     "on-click-right": "alacritty"
   },
   "memory": {
-    "format": "  {used:0.1f}G/{total:0.1f}G",
+    // "format": "  {used:0.1f}G/{total:0.1f}G",
+    "format": "  {used:0.1f}G",
     "on-click": "omarchy-launch-or-focus-tui btop",
     "tooltip": false
   },
@@ -83,7 +79,7 @@
     "tooltip": false
   },
   "clock": {
-    "format": "{:L%A %I:%M %p}",
+    "format": "{:L%B %d %I:%M %p}",
     "format-alt": "{:L%d %B W%V %Y}",
     "tooltip": false,
     "on-click-right": "omarchy-launch-floating-terminal-with-presentation omarchy-tz-select"
@@ -103,7 +99,7 @@
   },
   "battery": {
     "format": "{capacity}% {icon}",
-    "format-discharging": "{icon}",
+    "format-discharging": "{capacity}% {icon}",
     "format-charging": "{icon}",
     "format-plugged": "",
     "format-icons": {
@@ -194,5 +190,46 @@
   "tray": {
     "icon-size": 12,
     "spacing": 17
-  }
+  },
+  "custom/weather": {
+    "exec": "waybar-weather",
+    "restart-interval": 60,
+    "return-type": "json",
+    "format": "{}",
+    "hide-empty-text": true
+  },
+  "custom/github-activity": {
+    "exec": "/home/hpham/OmarchyDotFiles/scripts/kona-check.py",
+    "interval": 120,
+    "return-type": "json",
+    "format": "{}",
+    "tooltip": true
+  },
+  "custom/docker": {
+    "exec": "/home/hpham/OmarchyDotFiles/scripts/docker-status.sh",
+    "interval": 5,
+    "return-type": "json",
+    "tooltip": "Docker containers running"
+  },
+    "custom/waybar-media": {
+    "return-type": "json",
+    "exec": "/home/hpham/OmarchyDotFiles/scripts/media-player.sh",
+    "interval": 2,
+    "on-click": "playerctl play-pause",
+    "on-scroll-up": "playerctl previous",
+    "on-scroll-down": "playerctl next",
+    "escape": true
+  },
+  "group/system": {
+  "orientation": "inherit",
+  "modules": [
+    "custom/docker",
+    "bluetooth",
+    "network",
+    "pulseaudio",
+    "battery",
+    "clock",
+    "custom/weather"
+  ]
+ }
 }

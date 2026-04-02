@@ -2,7 +2,7 @@
 
 @define-color bg @background;
 @define-color fg @foreground;
-@define-color rd1 #59e3e3;
+@define-color rd1 #FFC107;
 @define-color dark-bg #4d4d4d;
 @define-color hover-bg #313244;
 
@@ -114,7 +114,6 @@ window#waybar.hidden {
 #bluetooth,
 #pulseaudio,
 #custom-omarchy,
-#custom-waybar-media,
 #custom-weather,
 #custom-update,
 #custom-updatespacman,
@@ -135,16 +134,6 @@ window#waybar.hidden {
   opacity: 0.9;
   padding: 2px 15px;
 }
-
-#system {
-  background-color: @dark-bg;
-  color: @fg;
-  margin: 2px;
-  border-radius: 20px;
-  opacity: 0.9;
-  padding: 2px 15px;
-}
-
 
 #custom-omarchy {
   color: @rd1;
