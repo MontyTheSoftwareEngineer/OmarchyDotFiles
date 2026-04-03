@@ -31,6 +31,15 @@ tooltip label {
     animation-direction: alternate;
 }
 
+#custom-cpucat {
+  font-family: "Waycat", monospace;
+  font-size: 22px;
+  font-weight: bold;
+  color: white;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
 .waybar-weather.hot {
     color: #a91313;
 }
@@ -123,20 +132,12 @@ window#waybar.hidden {
 #custom-netspeed,
 #custom-gpu,
 #custom-github-activity,
+#custom-sprite-animation,
 #clock,
 #tray-expander,
 #disk,
+#system,
 #idle_inhibitor {
-  background-color: @dark-bg;
-  color: @fg;
-  margin: 2px;
-  padding: 0 15px;
-  border-radius: 20px;
-  opacity: 0.9;
-  padding: 2px 15px;
-}
-
-#system {
   background-color: @dark-bg;
   color: @fg;
   margin: 2px;
@@ -252,3 +253,44 @@ window#waybar.hidden {
     color: #f38ba8;
   }
 }
+
+/* Sprite Animation Styles */
+#custom-sprite-animation {
+  font-size: 13px;
+  padding: 2px 12px;
+  min-width: 50px;
+}
+
+#custom-sprite-animation:hover {
+  background-color: @hover-bg;
+  color: @rd1;
+}
+
+#custom-sprite-animation.sprite-RUN {
+  color: #89b4fa;
+}
+
+#custom-sprite-animation.sprite-WALK {
+  color: #a6e3a1;
+}
+
+#custom-sprite-animation.sprite-IDLE {
+  color: #f9e2af;
+}
+
+#custom-sprite-animation.sprite-JUMP {
+  color: #fab387;
+}
+
+#custom-sprite-animation.sprite-attack {
+  color: #f38ba8;
+}
+
+#custom-sprite-animation.sprite-HURT {
+  color: #ff6b6b;
+}
+
+#custom-sprite-animation.sprite-JR {
+  color: #cba6f7;
+}
+

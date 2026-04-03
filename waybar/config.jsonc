@@ -45,6 +45,12 @@
       "5": []
     }
   },
+"custom/cpucat": {
+"exec":"/home/hpham/OmarchyDotFiles/scripts/catloop.sh",
+        "spacing": 1,
+        "format": "{}",
+        "tooltip": true,
+},
   "custom/omarchy": {
     "format": "<span font='omarchy'>\ue900</span>",
     "on-click": "omarchy-menu",
@@ -231,5 +237,14 @@
     "clock",
     "custom/weather"
   ]
- }
+ },
+  "custom/sprite-animation": {
+    "exec": "$HOME/.config/waybar/scripts/sprite-animator.sh",
+    "return-type": "json",
+    "interval": 0.1,
+    "tooltip": true,
+    "format": "{}",
+    "on-click": "rm -f $HOME/.cache/waybar-sprites/current_sprite.state",
+    "signal": 10
+  }
 }
